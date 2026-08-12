@@ -15,7 +15,7 @@ import { Colors, Shadows, BorderRadius } from '@/constants/theme';
 interface ClayButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'info' | 'success' | 'outline' | 'ghost';
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -49,7 +49,19 @@ export const ClayButton: React.FC<ClayButtonProps> = ({
     }).start();
   };
 
-  if (variant === 'primary') {
+  if (variant === 'primary' || variant === 'info' || variant === 'success') {
+    const gradientColors: [string, string, ...string[]] =
+      variant === 'info'
+        ? ['#38BDF8', '#0EA5E9', '#0284C7']
+        : variant === 'success'
+        ? ['#34D399', '#10B981', '#059669']
+        : ['#FFC727', '#F59E0B', '#E58A00'];
+
+    const shadowStyle =
+      variant === 'info'
+        ? Shadows.blueButton
+        : Shadows.primaryButton;
+
     return (
       <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
         <TouchableOpacity
@@ -58,10 +70,10 @@ export const ClayButton: React.FC<ClayButtonProps> = ({
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
           disabled={disabled}
-          style={[styles.baseButton, Shadows.primaryButton, disabled && styles.disabled]}
+          style={[styles.baseButton, shadowStyle, disabled && styles.disabled]}
         >
           <LinearGradient
-            colors={['#FFC727', '#F59E0B', '#E58A00']}
+            colors={gradientColors}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.gradientContainer}

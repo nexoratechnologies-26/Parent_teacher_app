@@ -12,6 +12,8 @@ export const Colors = {
   primaryDark: '#D97706',
   primaryLight: '#FDE68A',
   primaryGradient: ['#FFC01D', '#F59E0B', '#E58A00'],
+  blueGradient: ['#38BDF8', '#0EA5E9', '#0284C7'],
+  greenGradient: ['#34D399', '#10B981', '#059669'],
   
   secondary: '#3B82F6',
   secondaryLight: '#EFF6FF',
@@ -100,6 +102,13 @@ export const Shadows = {
     shadowRadius: 12,
     elevation: 4,
   },
+  blueButton: {
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 7,
+  },
 };
 
 export const Spacing = {
@@ -117,6 +126,7 @@ export const BorderRadius = {
   md: 16,
   lg: 22,
   xl: 28,
+  xxl: 36,
   full: 9999,
 };
 
