@@ -1,0 +1,31 @@
+app/
+├── index.tsx - done
+├── _layout.tsx 
+├── (auth)/ - kishore
+│ ├── login.tsx - done
+│ ├── register.tsx - done
+│ └── reset-password.tsx - done
+├── (parent)/ - kishore
+│ ├── _layout.tsx
+│ ├── dashboard.tsx - done
+│ ├── profile.tsx - done
+│ ├── attendance.tsx - done
+│ ├── homework.tsx - done
+│ ├── marks.tsx
+│ ├── notices.tsx
+│ ├── messages.tsx
+│ └── notifications.tsx
+├── (teacher)/ - member 1
+│ ├── _layout.tsx
+│ ├── dashboard.tsx
+│ ├── student-management.tsx
+│ ├── mark-attendance.tsx
+│ ├── upload-marks.tsx
+│ ├── post-homework.tsx
+│ ├── post-notice.tsx
+│ └── messages.tsx
+└── (admin)/ - member 2
+├── _layout.tsx
+├── dashboard.tsx
+├── user-management.tsx
+└── system-activity.tsx
