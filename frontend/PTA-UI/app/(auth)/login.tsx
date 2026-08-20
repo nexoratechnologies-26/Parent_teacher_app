@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as SecureStore from 'expo-secure-store';
 
 import { Colors, Shadows, BorderRadius, Spacing } from '@/constants/theme';
 import { ClayInput } from '@/components/ui/ClayInput';
@@ -56,23 +57,58 @@ export default function LoginScreen() {
   const handleSignIn = async () => {
     if (!validate()) return;
 
+    const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+    if (!apiUrl) {
+      Alert.alert('Configuration Error', 'EXPO_PUBLIC_API_URL is missing. Cannot connect to server.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Simulate authentication flow / API endpoint POST /api/v1/auth/login
-      setTimeout(() => {
+      const response = await fetch(`${apiUrl}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: emailOrUsername,
+          password: password,
+          role: selectedRole,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
         setLoading(false);
-        if (selectedRole === 'PARENT') {
-          router.replace('/(parent)/dashboard' as any);
-        } else if (selectedRole === 'TEACHER') {
-          router.replace('/(teacher)/dashboard' as any);
-        } else {
-          router.replace('/(admin)/dashboard' as any);
-        }
-      }, 600);
+        Alert.alert('Sign In Failed', data.message || 'Invalid credentials.');
+        return;
+      }
+
+      if (data.data?.accessToken) {
+        await SecureStore.setItemAsync('accessToken', data.data.accessToken);
+      }
+      
+      if (data.data?.refreshToken) {
+        await SecureStore.setItemAsync('refreshToken', data.data.refreshToken);
+      }
+
+      setLoading(false);
+
+      const userRole = data.data?.user?.role;
+      if (userRole === 'PARENT') {
+        router.replace('/(parent)/dashboard' as any);
+      } else if (userRole === 'TEACHER') {
+        router.replace('/(teacher)/dashboard' as any);
+      } else if (userRole === 'ADMIN') {
+        router.replace('/(admin)/dashboard' as any);
+      } else {
+        Alert.alert('Sign In Error', 'Unrecognized user role returned from server.');
+      }
     } catch (err) {
       setLoading(false);
-      Alert.alert('Sign In Failed', 'Invalid credentials or server error. Please try again.');
+      Alert.alert('Network Error', 'Could not connect to the server. Please try again later.');
     }
   };
 
