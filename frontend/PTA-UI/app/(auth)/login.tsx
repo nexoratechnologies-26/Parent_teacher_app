@@ -86,12 +86,20 @@ export default function LoginScreen() {
         return;
       }
 
-      if (data.data?.accessToken) {
-        await SecureStore.setItemAsync('accessToken', data.data.accessToken);
-      }
-      
-      if (data.data?.refreshToken) {
-        await SecureStore.setItemAsync('refreshToken', data.data.refreshToken);
+      if (Platform.OS === 'web') {
+        if (data.data?.accessToken) {
+          localStorage.setItem('accessToken', data.data.accessToken);
+        }
+        if (data.data?.refreshToken) {
+          localStorage.setItem('refreshToken', data.data.refreshToken);
+        }
+      } else {
+        if (data.data?.accessToken) {
+          await SecureStore.setItemAsync('accessToken', data.data.accessToken);
+        }
+        if (data.data?.refreshToken) {
+          await SecureStore.setItemAsync('refreshToken', data.data.refreshToken);
+        }
       }
 
       setLoading(false);

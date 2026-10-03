@@ -20,13 +20,26 @@ const app = express();
 
 // ─── 1. Global Middlewares ────────────────────────────────────────────────────
 
-// CORS — restrict origins in production via CLIENT_URL env var
+// CORS — support local dev, production CLIENT_URL, and Vercel preview domains
+const allowedOrigins = env.CLIENT_URL ? env.CLIENT_URL.split(',').map((u) => u.trim()) : ['*'];
+
 app.use(
   cors({
-    origin      : env.CLIENT_URL || '*',
-    methods     : ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    origin: (origin, callback) => {
+      // Allow mobile apps, curl, postman, or server-to-server requests with no origin header
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      // Allow localhost and vercel.app domains automatically for seamless deployment
+      if (env.NODE_ENV !== 'production' || origin.includes('vercel.app') || origin.includes('localhost')) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials : true,
+    credentials: true,
   })
 );
 

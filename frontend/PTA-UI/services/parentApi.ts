@@ -25,7 +25,7 @@ import {
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 // Toggle mock fallback for offline/development resilience
-const USE_MOCK_FALLBACK = true;
+const USE_MOCK_FALLBACK = process.env.EXPO_PUBLIC_USE_MOCK === 'true';
 
 class ParentApiService {
   private inMemoryMessages: Record<string, ChatMessage[]> = { ...mockChatMessages };
