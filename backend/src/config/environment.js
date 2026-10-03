@@ -1,8 +1,9 @@
 const dotenv = require('dotenv');
 const path = require('path');
 
-// Load environment variables from .env file
+// Load environment variables from .env file (backend or root directory)
 dotenv.config({ path: path.join(__dirname, '../../.env') });
+dotenv.config({ path: path.join(__dirname, '../../../.env') });
 
 const requiredEnvVars = [
   'DATABASE_URL',

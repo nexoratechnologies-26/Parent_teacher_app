@@ -21,8 +21,12 @@ import {
   mockNotifications,
 } from './mockData';
 
-// Base API configuration
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+// Base API configuration — automatically detects deployed origin on web or uses EXPO_PUBLIC_API_URL
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL ||
+  (typeof window !== 'undefined' && window.location?.origin
+    ? `${window.location.origin}/api/v1`
+    : 'http://localhost:5000/api/v1');
 
 // Toggle mock fallback for offline/development resilience
 const USE_MOCK_FALLBACK = process.env.EXPO_PUBLIC_USE_MOCK === 'true';
