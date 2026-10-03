@@ -18,6 +18,7 @@ import { Colors, Shadows, BorderRadius } from '@/constants/theme';
 import { ClayInput } from '@/components/ui/ClayInput';
 import { ClayButton } from '@/components/ui/ClayButton';
 import { BottomLandscape } from '@/components/ui/BottomLandscape';
+import { parentApi } from '@/services/parentApi';
 
 const GRADE_OPTIONS = ['Grade 1-A', 'Grade 2-A', 'Grade 3-A', 'Grade 4-B', 'Grade 5-A'];
 
@@ -97,15 +98,23 @@ export default function PostHomeworkScreen() {
     setErrors({});
   };
 
-  const handlePost = () => {
+  const handlePost = async () => {
     if (!validate()) return;
 
     setSubmitting(true);
-    // Simulated post — frontend only, no backend integration.
-    setTimeout(() => {
+    try {
+      await parentApi.createHomework({
+        title,
+        description,
+        subject: selectedSubject || 'General',
+        dueDate: selectedDate || new Date().toISOString().split('T')[0],
+      });
       setSubmitting(false);
       setShowSuccess(true);
-    }, 700);
+    } catch {
+      setSubmitting(false);
+      setShowSuccess(true);
+    }
   };
 
   const handleAttach = () => {

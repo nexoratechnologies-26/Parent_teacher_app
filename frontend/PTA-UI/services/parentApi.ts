@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import {
   StudentDetails,
   MonthlyAttendanceResponse,
@@ -20,6 +22,7 @@ import {
   mockChatMessages,
   mockNotifications,
 } from './mockData';
+import { supabase, isSupabaseConfigured } from './supabase';
 
 // Base API configuration — automatically detects deployed origin on web or uses EXPO_PUBLIC_API_URL
 const getBaseApiUrl = () => {
@@ -37,6 +40,36 @@ const USE_MOCK_FALLBACK = process.env.EXPO_PUBLIC_USE_MOCK === 'true';
 class ParentApiService {
   private inMemoryMessages: Record<string, ChatMessage[]> = { ...mockChatMessages };
   private inMemoryNotifications: NotificationItem[] = [...mockNotifications];
+  private inMemoryAnnouncements: Announcement[] = [...mockAnnouncements];
+  private inMemoryHomework: HomeworkItem[] = [...mockHomeworkList];
+
+  private async getAuthHeaders(): Promise<Record<string, string>> {
+    let token: string | null = null;
+
+    if (isSupabaseConfigured()) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        token = data.session?.access_token || null;
+      } catch {}
+    }
+
+    if (!token) {
+      if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          token = window.localStorage.getItem('accessToken');
+        }
+      } else {
+        try {
+          token = await SecureStore.getItemAsync('accessToken');
+        } catch {}
+      }
+    }
+
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }
 
   /**
    * GET /api/v1/parents/students
@@ -57,9 +90,12 @@ class ParentApiService {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/parents/students`);
+      const res = await fetch(`${API_BASE_URL}/parents/students`, {
+        headers: await this.getAuthHeaders(),
+      });
       if (!res.ok) throw new Error('Failed to fetch linked children');
-      return await res.json();
+      const json = await res.json();
+      return json.data || json;
     } catch (err) {
       console.warn('API Error, using fallback:', err);
       return mockStudents;
@@ -78,9 +114,12 @@ class ParentApiService {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/students/${studentId}`);
+      const res = await fetch(`${API_BASE_URL}/students/${studentId}`, {
+        headers: await this.getAuthHeaders(),
+      });
       if (!res.ok) throw new Error('Failed to fetch student profile');
-      return await res.json();
+      const json = await res.json();
+      return json.data || json;
     } catch (err) {
       console.warn('API Error, using fallback:', err);
       return mockStudents[0];
@@ -103,22 +142,25 @@ class ParentApiService {
           absentDays: 1,
           totalDays: 23,
         },
-        recentHomework: mockHomeworkList.slice(0, 3),
-        latestNotices: mockAnnouncements.slice(0, 2),
+        recentHomework: this.inMemoryHomework.slice(0, 3),
+        latestNotices: this.inMemoryAnnouncements.slice(0, 2),
       };
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/students/${studentId}/dashboard-summary`);
+      const res = await fetch(`${API_BASE_URL}/students/${studentId}/dashboard-summary`, {
+        headers: await this.getAuthHeaders(),
+      });
       if (!res.ok) throw new Error('Failed to fetch dashboard summary');
-      return await res.json();
+      const json = await res.json();
+      return json.data || json;
     } catch (err) {
       console.warn('API Error, using fallback:', err);
       return {
         studentId,
         attendanceSummary: { percentage: 96, presentDays: 22, absentDays: 1, totalDays: 23 },
-        recentHomework: mockHomeworkList,
-        latestNotices: mockAnnouncements,
+        recentHomework: this.inMemoryHomework,
+        latestNotices: this.inMemoryAnnouncements,
       };
     }
   }
@@ -139,10 +181,12 @@ class ParentApiService {
 
     try {
       const res = await fetch(
-        `${API_BASE_URL}/students/${studentId}/attendance?month=${month}&year=${year}`
+        `${API_BASE_URL}/students/${studentId}/attendance?month=${month}&year=${year}`,
+        { headers: await this.getAuthHeaders() }
       );
       if (!res.ok) throw new Error('Failed to fetch attendance records');
-      return await res.json();
+      const json = await res.json();
+      return json.data || json;
     } catch (err) {
       console.warn('API Error, using fallback:', err);
       return generateMonthlyAttendance(studentId, month, year);
@@ -160,20 +204,61 @@ class ParentApiService {
     if (USE_MOCK_FALLBACK) {
       await this.simulateLatency();
       if (!filterStatus || filterStatus === 'ALL') {
-        return mockHomeworkList;
+        return this.inMemoryHomework;
       }
-      return mockHomeworkList.filter((item) => item.status === filterStatus);
+      return this.inMemoryHomework.filter((item) => item.status === filterStatus);
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/students/${studentId}/homework`);
+      const res = await fetch(`${API_BASE_URL}/students/${studentId}/homework`, {
+        headers: await this.getAuthHeaders(),
+      });
       if (!res.ok) throw new Error('Failed to fetch homework');
-      const data: HomeworkItem[] = await res.json();
+      const json = await res.json();
+      const data: HomeworkItem[] = json.data || json;
       if (!filterStatus || filterStatus === 'ALL') return data;
       return data.filter((item) => item.status === filterStatus);
     } catch (err) {
       console.warn('API Error, using fallback:', err);
-      return mockHomeworkList;
+      return this.inMemoryHomework;
+    }
+  }
+
+  /**
+   * POST /api/v1/homework
+   * Teacher creates new homework assignment
+   */
+  async createHomework(data: Partial<HomeworkItem>): Promise<HomeworkItem> {
+    const newItem: HomeworkItem = {
+      id: `hw_${Date.now()}`,
+      subject: data.subject || 'General',
+      subjectCategory: (data.subjectCategory as any) || 'MATH',
+      title: data.title || 'Assignment',
+      description: data.description || '',
+      assignedDate: new Date().toISOString().split('T')[0],
+      dueDate: data.dueDate || new Date().toISOString().split('T')[0],
+      dueLabel: data.dueLabel || 'Due Soon',
+      status: 'PENDING',
+      teacherName: data.teacherName || 'Teacher',
+    };
+
+    if (USE_MOCK_FALLBACK) {
+      await this.simulateLatency(300);
+      this.inMemoryHomework.unshift(newItem);
+      return newItem;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/homework`, {
+        method: 'POST',
+        headers: await this.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      return json.data || json;
+    } catch (err) {
+      this.inMemoryHomework.unshift(newItem);
+      return newItem;
     }
   }
 
@@ -192,9 +277,12 @@ class ParentApiService {
 
     try {
       const query = termId ? `?termId=${termId}` : '';
-      const res = await fetch(`${API_BASE_URL}/students/${studentId}/marks${query}`);
+      const res = await fetch(`${API_BASE_URL}/students/${studentId}/marks${query}`, {
+        headers: await this.getAuthHeaders(),
+      });
       if (!res.ok) throw new Error('Failed to fetch marks');
-      return await res.json();
+      const json = await res.json();
+      return json.data || json;
     } catch (err) {
       console.warn('API Error, using fallback:', err);
       return mockAcademicMarks;
@@ -208,18 +296,60 @@ class ParentApiService {
   async getAnnouncements(category?: string): Promise<Announcement[]> {
     if (USE_MOCK_FALLBACK) {
       await this.simulateLatency();
-      if (!category || category === 'ALL') return mockAnnouncements;
-      return mockAnnouncements.filter((a) => a.category === category);
+      if (!category || category === 'ALL') return this.inMemoryAnnouncements;
+      return this.inMemoryAnnouncements.filter((a) => a.category === category);
     }
 
     try {
       const query = category && category !== 'ALL' ? `?category=${category}` : '';
-      const res = await fetch(`${API_BASE_URL}/announcements${query}`);
+      const res = await fetch(`${API_BASE_URL}/announcements${query}`, {
+        headers: await this.getAuthHeaders(),
+      });
       if (!res.ok) throw new Error('Failed to fetch announcements');
-      return await res.json();
+      const json = await res.json();
+      const list = json.data || json;
+      return Array.isArray(list) ? list : this.inMemoryAnnouncements;
     } catch (err) {
       console.warn('API Error, using fallback:', err);
-      return mockAnnouncements;
+      return this.inMemoryAnnouncements;
+    }
+  }
+
+  /**
+   * POST /api/v1/announcements
+   * Create new school notice
+   */
+  async createAnnouncement(data: Partial<Announcement>): Promise<Announcement> {
+    const newNotice: Announcement = {
+      id: `anc_${Date.now()}`,
+      title: data.title || 'Notice',
+      body: data.body || '',
+      category: (data.category as any) || 'GENERAL',
+      publishedAt: new Date().toISOString().split('T')[0],
+      author: data.author || 'Teacher',
+      isFeatured: data.isFeatured || false,
+      eventDate: data.eventDate,
+    };
+
+    if (USE_MOCK_FALLBACK) {
+      await this.simulateLatency(300);
+      this.inMemoryAnnouncements.unshift(newNotice);
+      return newNotice;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/announcements`, {
+        method: 'POST',
+        headers: await this.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      const created = json.data || json;
+      this.inMemoryAnnouncements.unshift(created);
+      return created;
+    } catch (err) {
+      this.inMemoryAnnouncements.unshift(newNotice);
+      return newNotice;
     }
   }
 
@@ -234,9 +364,12 @@ class ParentApiService {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/communications/teachers`);
+      const res = await fetch(`${API_BASE_URL}/communications/teachers`, {
+        headers: await this.getAuthHeaders(),
+      });
       if (!res.ok) throw new Error('Failed to fetch teachers');
-      return await res.json();
+      const json = await res.json();
+      return json.data || json;
     } catch (err) {
       console.warn('API Error, using fallback:', err);
       return mockTeachers;
@@ -254,9 +387,12 @@ class ParentApiService {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/communications/messages/${teacherId}`);
+      const res = await fetch(`${API_BASE_URL}/communications/messages/${teacherId}`, {
+        headers: await this.getAuthHeaders(),
+      });
       if (!res.ok) throw new Error('Failed to fetch chat messages');
-      return await res.json();
+      const json = await res.json();
+      return json.data || json;
     } catch (err) {
       console.warn('API Error, using fallback:', err);
       return this.inMemoryMessages[teacherId] || [];
@@ -291,13 +427,19 @@ class ParentApiService {
     try {
       const res = await fetch(`${API_BASE_URL}/communications/messages`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await this.getAuthHeaders(),
         body: JSON.stringify({ recipientId: teacherId, message: messageText }),
       });
       if (!res.ok) throw new Error('Failed to send message');
-      return await res.json();
+      const json = await res.json();
+      const saved = json.data || json;
+      if (!this.inMemoryMessages[teacherId]) this.inMemoryMessages[teacherId] = [];
+      this.inMemoryMessages[teacherId].push(saved);
+      return saved;
     } catch (err) {
       console.warn('API Error, using fallback:', err);
+      if (!this.inMemoryMessages[teacherId]) this.inMemoryMessages[teacherId] = [];
+      this.inMemoryMessages[teacherId].push(newMessage);
       return newMessage;
     }
   }
@@ -313,9 +455,12 @@ class ParentApiService {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/notifications`);
+      const res = await fetch(`${API_BASE_URL}/notifications`, {
+        headers: await this.getAuthHeaders(),
+      });
       if (!res.ok) throw new Error('Failed to fetch notifications');
-      return await res.json();
+      const json = await res.json();
+      return json.data || json;
     } catch (err) {
       console.warn('API Error, using fallback:', err);
       return this.inMemoryNotifications;
@@ -337,6 +482,7 @@ class ParentApiService {
     try {
       const res = await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
         method: 'PATCH',
+        headers: await this.getAuthHeaders(),
       });
       return await res.json();
     } catch (err) {

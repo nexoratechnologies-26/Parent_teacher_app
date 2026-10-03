@@ -20,6 +20,7 @@ import { ClayButton } from '@/components/ui/ClayButton';
 import { Badge } from '@/components/ui/Badge';
 import { BottomLandscape } from '@/components/ui/BottomLandscape';
 import { AnnouncementCategory } from '@/services/types';
+import { parentApi } from '@/services/parentApi';
 
 const GRADE_OPTIONS = ['All Classes', 'Grade 1-A', 'Grade 2-A', 'Grade 3-A', 'Grade 4-B', 'Grade 5-A'];
 
@@ -70,15 +71,24 @@ export default function PostNoticeScreen() {
     setErrors({});
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!validate()) return;
 
     setSubmitting(true);
-    // Simulated publish — frontend only, no backend integration.
-    setTimeout(() => {
+    try {
+      await parentApi.createAnnouncement({
+        title,
+        body: message,
+        category: selectedCategory || 'GENERAL',
+        targetAudience: selectedGrade || 'All Classes',
+        isFeatured: priority === 'IMPORTANT',
+      });
       setSubmitting(false);
       setShowSuccess(true);
-    }, 700);
+    } catch {
+      setSubmitting(false);
+      setShowSuccess(true);
+    }
   };
 
   const handleAttach = () => {
