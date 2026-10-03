@@ -19,6 +19,8 @@ import { ClayInput } from '@/components/ui/ClayInput';
 import { ClayButton } from '@/components/ui/ClayButton';
 import { SegmentedRoleControl, RoleType } from '@/components/ui/SegmentedRoleControl';
 import { BottomLandscape } from '@/components/ui/BottomLandscape';
+import { authService } from '@/services/authService';
+import { isSupabaseConfigured } from '@/services/supabase';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -85,15 +87,50 @@ export default function RegisterScreen() {
 
     setLoading(true);
 
-    let apiUrl = process.env.EXPO_PUBLIC_API_URL;
-    if (typeof window !== 'undefined' && window.location?.origin) {
-      apiUrl = `${window.location.origin}/api/v1`;
-    }
-    if (!apiUrl) {
-      apiUrl = '/api/v1';
-    }
-
     try {
+      if (isSupabaseConfigured()) {
+        const { error } = await authService.signUp(
+          fullName.trim(),
+          email.trim().toLowerCase(),
+          password,
+          selectedRole,
+          phone.trim()
+        );
+
+        if (error) {
+          setLoading(false);
+          Alert.alert('Registration Failed', error);
+          return;
+        }
+
+        setLoading(false);
+        Alert.alert(
+          'Account Created! 🎉',
+          `Welcome to SchoolSync as a ${selectedRole.toLowerCase()}! Please sign in with your credentials.`,
+          [
+            {
+              text: 'Sign In Now',
+              onPress: () => {
+                router.replace({
+                  pathname: '/(auth)/login' as any,
+                  params: { role: selectedRole },
+                });
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      // Backend API / Local fallback
+      let apiUrl = process.env.EXPO_PUBLIC_API_URL;
+      if (typeof window !== 'undefined' && window.location?.origin) {
+        apiUrl = `${window.location.origin}/api/v1`;
+      }
+      if (!apiUrl) {
+        apiUrl = '/api/v1';
+      }
+
       const response = await fetch(`${apiUrl}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

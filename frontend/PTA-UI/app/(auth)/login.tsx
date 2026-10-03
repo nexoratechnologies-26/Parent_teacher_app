@@ -20,6 +20,8 @@ import { ClayInput } from '@/components/ui/ClayInput';
 import { ClayButton } from '@/components/ui/ClayButton';
 import { SegmentedRoleControl, RoleType } from '@/components/ui/SegmentedRoleControl';
 import { BottomLandscape } from '@/components/ui/BottomLandscape';
+import { authService } from '@/services/authService';
+import { isSupabaseConfigured } from '@/services/supabase';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -57,17 +59,38 @@ export default function LoginScreen() {
   const handleSignIn = async () => {
     if (!validate()) return;
 
-    let apiUrl = process.env.EXPO_PUBLIC_API_URL;
-    if (typeof window !== 'undefined' && window.location?.origin) {
-      apiUrl = `${window.location.origin}/api/v1`;
-    }
-    if (!apiUrl) {
-      apiUrl = '/api/v1';
-    }
-
     setLoading(true);
 
     try {
+      // 1. Supabase Authentication flow
+      if (isSupabaseConfigured()) {
+        const { user, error } = await authService.signIn(emailOrUsername, password, selectedRole);
+
+        if (error) {
+          setLoading(false);
+          Alert.alert('Sign In Failed', error);
+          return;
+        }
+
+        setLoading(false);
+        const userRole = user?.role || selectedRole;
+        if (userRole === 'TEACHER') {
+          router.replace('/(teacher)/dashboard' as any);
+        } else {
+          router.replace('/(parent)/dashboard' as any);
+        }
+        return;
+      }
+
+      // 2. Direct Backend API / Demo flow
+      let apiUrl = process.env.EXPO_PUBLIC_API_URL;
+      if (typeof window !== 'undefined' && window.location?.origin) {
+        apiUrl = `${window.location.origin}/api/v1`;
+      }
+      if (!apiUrl) {
+        apiUrl = '/api/v1';
+      }
+
       const response = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: {
@@ -115,7 +138,7 @@ export default function LoginScreen() {
     } catch (err) {
       setLoading(false);
       console.warn('Network error, activating instant demo session:', err);
-      // Graceful offline/preview fallback so user is never locked out
+      // Graceful offline/demo fallback so user is never locked out
       if (selectedRole === 'TEACHER' || emailOrUsername.toLowerCase().includes('teacher')) {
         router.replace('/(teacher)/dashboard' as any);
       } else {
