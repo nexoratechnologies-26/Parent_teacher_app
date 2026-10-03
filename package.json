@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "cd frontend/PTA-UI && npm install && npx expo export --platform web",
+    "seed": "node backend/src/scripts/seedUsers.js",
     "start:backend": "cd backend && npm start",
     "start:frontend": "cd frontend/PTA-UI && npm start"
   },

@@ -57,11 +57,11 @@ export default function LoginScreen() {
   const handleSignIn = async () => {
     if (!validate()) return;
 
-    const apiUrl = process.env.EXPO_PUBLIC_API_URL;
-    if (!apiUrl) {
-      Alert.alert('Configuration Error', 'EXPO_PUBLIC_API_URL is missing. Cannot connect to server.');
-      return;
-    }
+    const apiUrl =
+      process.env.EXPO_PUBLIC_API_URL ||
+      (typeof window !== 'undefined' && window.location?.origin
+        ? `${window.location.origin}/api/v1`
+        : 'http://localhost:5000/api/v1');
 
     setLoading(true);
 

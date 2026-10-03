@@ -85,29 +85,52 @@ export default function RegisterScreen() {
 
     setLoading(true);
 
+    const apiUrl =
+      process.env.EXPO_PUBLIC_API_URL ||
+      (typeof window !== 'undefined' && window.location?.origin
+        ? `${window.location.origin}/api/v1`
+        : 'http://localhost:5000/api/v1');
+
     try {
-      // Simulate API call for user registration: POST /api/v1/auth/register
-      setTimeout(() => {
+      const response = await fetch(`${apiUrl}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: fullName,
+          email: email.trim().toLowerCase(),
+          password,
+          role: selectedRole,
+          phone: phone.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
         setLoading(false);
-        Alert.alert(
-          'Account Created! 🎉',
-          `Welcome to SchoolSync as a ${selectedRole.toLowerCase()}! Please sign in with your credentials.`,
-          [
-            {
-              text: 'Sign In Now',
-              onPress: () => {
-                router.replace({
-                  pathname: '/(auth)/login' as any,
-                  params: { role: selectedRole },
-                });
-              },
+        Alert.alert('Registration Failed', data.message || 'Unable to create account.');
+        return;
+      }
+
+      setLoading(false);
+      Alert.alert(
+        'Account Created! 🎉',
+        `Welcome to SchoolSync as a ${selectedRole.toLowerCase()}! Please sign in with your credentials.`,
+        [
+          {
+            text: 'Sign In Now',
+            onPress: () => {
+              router.replace({
+                pathname: '/(auth)/login' as any,
+                params: { role: selectedRole },
+              });
             },
-          ]
-        );
-      }, 700);
+          },
+        ]
+      );
     } catch (err) {
       setLoading(false);
-      Alert.alert('Registration Error', 'Unable to create account. Please try again.');
+      Alert.alert('Registration Error', 'Could not connect to the server. Please try again.');
     }
   };
 
