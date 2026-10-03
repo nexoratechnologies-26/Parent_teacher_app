@@ -2,8 +2,11 @@ import { createClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseUrl =
+  process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://sbwhdfqxurstvmsgsnjh.supabase.co';
+const supabaseAnonKey =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNid2hkZnF4dXJzdHZtc2dzbmpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwNDA0OTIsImV4cCI6MjEwNjYxNjQ5Mn0.S1EXE_UNzsJVS6jYAJq-EO_znRVdTl5H4ZZL7xH7dJQ';
 
 // Cross-platform storage adapter (localStorage on Web, SecureStore on Mobile)
 const ExpoStorageAdapter = {
