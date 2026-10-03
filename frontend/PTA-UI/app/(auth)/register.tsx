@@ -85,11 +85,13 @@ export default function RegisterScreen() {
 
     setLoading(true);
 
-    const apiUrl =
-      process.env.EXPO_PUBLIC_API_URL ||
-      (typeof window !== 'undefined' && window.location?.origin
-        ? `${window.location.origin}/api/v1`
-        : 'http://localhost:5000/api/v1');
+    let apiUrl = process.env.EXPO_PUBLIC_API_URL;
+    if (typeof window !== 'undefined' && window.location?.origin) {
+      apiUrl = `${window.location.origin}/api/v1`;
+    }
+    if (!apiUrl) {
+      apiUrl = '/api/v1';
+    }
 
     try {
       const response = await fetch(`${apiUrl}/auth/register`, {

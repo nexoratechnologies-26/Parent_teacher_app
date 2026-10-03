@@ -59,12 +59,10 @@ export default function LoginScreen() {
 
     let apiUrl = process.env.EXPO_PUBLIC_API_URL;
     if (typeof window !== 'undefined' && window.location?.origin) {
-      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        apiUrl = `${window.location.origin}/api/v1`;
-      }
+      apiUrl = `${window.location.origin}/api/v1`;
     }
     if (!apiUrl) {
-      apiUrl = 'http://localhost:5000/api/v1';
+      apiUrl = '/api/v1';
     }
 
     setLoading(true);

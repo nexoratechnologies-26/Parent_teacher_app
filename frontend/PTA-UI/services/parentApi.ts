@@ -24,11 +24,9 @@ import {
 // Base API configuration — automatically detects deployed origin on web or uses EXPO_PUBLIC_API_URL
 const getBaseApiUrl = () => {
   if (typeof window !== 'undefined' && window.location?.origin) {
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      return `${window.location.origin}/api/v1`;
-    }
+    return `${window.location.origin}/api/v1`;
   }
-  return process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+  return process.env.EXPO_PUBLIC_API_URL || '/api/v1';
 };
 
 const API_BASE_URL = getBaseApiUrl();
