@@ -21,6 +21,7 @@ import { SegmentedRoleControl, RoleType } from '@/components/ui/SegmentedRoleCon
 import { BottomLandscape } from '@/components/ui/BottomLandscape';
 import { authService } from '@/services/authService';
 import { isSupabaseConfigured } from '@/services/supabase';
+import { fetchWithServerStatus } from '@/services/serverStatus';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -131,7 +132,7 @@ export default function RegisterScreen() {
         apiUrl = '/api/v1';
       }
 
-      const response = await fetch(`${apiUrl}/auth/register`, {
+      const response = await fetchWithServerStatus(`${apiUrl}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -169,7 +170,7 @@ export default function RegisterScreen() {
       );
     } catch (err) {
       setLoading(false);
-      Alert.alert('Registration Error', 'Could not connect to the server. Please try again.');
+      Alert.alert('Registration Error', 'We could not complete registration. Check the server notice or try again.');
     }
   };
 

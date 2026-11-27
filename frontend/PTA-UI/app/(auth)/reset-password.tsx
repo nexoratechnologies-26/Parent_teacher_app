@@ -18,6 +18,7 @@ import { Shadows, BorderRadius } from '@/constants/theme';
 import { ClayInput } from '@/components/ui/ClayInput';
 import { ClayButton } from '@/components/ui/ClayButton';
 import { BottomLandscape } from '@/components/ui/BottomLandscape';
+import { authService } from '@/services/authService';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -47,27 +48,29 @@ export default function ResetPasswordScreen() {
     setLoading(true);
 
     try {
-      // Simulate API call for password reset link: POST /api/v1/auth/forgot-password
-      setTimeout(() => {
-        setLoading(false);
-        setIsSent(true);
-        Alert.alert(
-          'Reset Link Sent! 📬',
-          `We have sent password recovery instructions to ${email}. Please check your inbox.`,
-          [
-            {
-              text: 'Back to Sign In',
-              onPress: () => {
-                router.replace({
-                  pathname: '/(auth)/login' as any,
-                  params: { role: params.role || 'PARENT' },
-                });
-              },
+      const result = await authService.resetPassword(email);
+      setLoading(false);
+      if (!result.success) {
+        Alert.alert('Could not send reset link', result.error || 'Please try again.');
+        return;
+      }
+      setIsSent(true);
+      Alert.alert(
+        'Reset Link Sent! 📬',
+        `We have sent password recovery instructions to ${email}. Please check your inbox.`,
+        [
+          {
+            text: 'Back to Sign In',
+            onPress: () => {
+              router.replace({
+                pathname: '/(auth)/login' as any,
+                params: { role: params.role || 'PARENT' },
+              });
             },
-          ]
-        );
-      }, 700);
-    } catch (err) {
+          },
+        ]
+      );
+    } catch {
       setLoading(false);
       Alert.alert('Error', 'Unable to send reset instructions. Please try again.');
     }

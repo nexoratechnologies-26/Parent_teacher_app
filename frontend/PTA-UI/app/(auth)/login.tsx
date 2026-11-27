@@ -22,6 +22,7 @@ import { SegmentedRoleControl, RoleType } from '@/components/ui/SegmentedRoleCon
 import { BottomLandscape } from '@/components/ui/BottomLandscape';
 import { authService } from '@/services/authService';
 import { isSupabaseConfigured } from '@/services/supabase';
+import { fetchWithServerStatus } from '@/services/serverStatus';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -91,7 +92,7 @@ export default function LoginScreen() {
         apiUrl = '/api/v1';
       }
 
-      const response = await fetch(`${apiUrl}/auth/login`, {
+      const response = await fetchWithServerStatus(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -137,13 +138,8 @@ export default function LoginScreen() {
       }
     } catch (err) {
       setLoading(false);
-      console.warn('Network error, activating instant demo session:', err);
-      // Graceful offline/demo fallback so user is never locked out
-      if (selectedRole === 'TEACHER' || emailOrUsername.toLowerCase().includes('teacher')) {
-        router.replace('/(teacher)/dashboard' as any);
-      } else {
-        router.replace('/(parent)/dashboard' as any);
-      }
+      console.warn('Sign-in request failed:', err);
+      Alert.alert('Unable to sign in', 'We could not complete sign-in. Check the server notice or try again.');
     }
   };
 

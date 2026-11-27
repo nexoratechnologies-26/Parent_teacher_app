@@ -1,5 +1,21 @@
-import { supabase, isSupabaseConfigured } from './supabase';
+import { supabase, isSupabaseConfigured, supabaseHealthUrl } from './supabase';
 import { RoleType } from '@/components/ui/SegmentedRoleControl';
+import { isConnectivityError, reportConnectivityError, reportServerAvailable } from './serverStatus';
+
+const checkSupabaseHealth = async () => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch(supabaseHealthUrl, {
+      method: 'GET',
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+    return response.status < 500;
+  } finally {
+    clearTimeout(timeout);
+  }
+};
 
 export interface AuthUser {
   id: string;
@@ -39,8 +55,12 @@ class AuthService {
       });
 
       if (error) {
+        reportConnectivityError(error, checkSupabaseHealth);
+        if (!isConnectivityError(error)) reportServerAvailable();
         return { user: null, error: error.message };
       }
+
+      reportServerAvailable();
 
       if (!data.user) {
         return { user: null, error: 'No user data returned from Supabase.' };
@@ -60,6 +80,7 @@ class AuthService {
         error: null,
       };
     } catch (err: any) {
+      reportConnectivityError(err, checkSupabaseHealth);
       return { user: null, error: err.message || 'An unexpected authentication error occurred.' };
     }
   }
@@ -102,8 +123,12 @@ class AuthService {
       });
 
       if (error) {
+        reportConnectivityError(error, checkSupabaseHealth);
+        if (!isConnectivityError(error)) reportServerAvailable();
         return { user: null, error: error.message };
       }
+
+      reportServerAvailable();
 
       return {
         user: {
@@ -116,6 +141,7 @@ class AuthService {
         error: null,
       };
     } catch (err: any) {
+      reportConnectivityError(err, checkSupabaseHealth);
       return { user: null, error: err.message || 'Failed to create user account.' };
     }
   }
@@ -130,9 +156,14 @@ class AuthService {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase());
+      if (error) {
+        reportConnectivityError(error, checkSupabaseHealth);
+        if (!isConnectivityError(error)) reportServerAvailable();
+      } else reportServerAvailable();
       if (error) return { success: false, error: error.message };
       return { success: true, error: null };
     } catch (err: any) {
+      reportConnectivityError(err, checkSupabaseHealth);
       return { success: false, error: err.message || 'Failed to send reset email.' };
     }
   }

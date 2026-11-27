@@ -23,6 +23,7 @@ import {
   mockNotifications,
 } from './mockData';
 import { supabase, isSupabaseConfigured } from './supabase';
+import { fetchWithServerStatus } from './serverStatus';
 
 // Base API configuration — automatically detects deployed origin on web or uses EXPO_PUBLIC_API_URL
 const getBaseApiUrl = () => {
@@ -36,6 +37,15 @@ const API_BASE_URL = getBaseApiUrl();
 
 // Toggle mock fallback for offline/development resilience
 const USE_MOCK_FALLBACK = process.env.EXPO_PUBLIC_USE_MOCK === 'true';
+
+export async function checkApiServerAvailability(): Promise<void> {
+  if (USE_MOCK_FALLBACK) return;
+  try {
+    await fetchWithServerStatus(API_BASE_URL, { method: 'GET' });
+  } catch {
+    // The shared fetch handler records the outage for the app-wide notice.
+  }
+}
 
 class ParentApiService {
   private inMemoryMessages: Record<string, ChatMessage[]> = { ...mockChatMessages };
@@ -90,7 +100,7 @@ class ParentApiService {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/parents/students`, {
+      const res = await fetchWithServerStatus(`${API_BASE_URL}/parents/students`, {
         headers: await this.getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch linked children');
@@ -114,7 +124,7 @@ class ParentApiService {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/students/${studentId}`, {
+      const res = await fetchWithServerStatus(`${API_BASE_URL}/students/${studentId}`, {
         headers: await this.getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch student profile');
@@ -148,7 +158,7 @@ class ParentApiService {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/students/${studentId}/dashboard-summary`, {
+      const res = await fetchWithServerStatus(`${API_BASE_URL}/students/${studentId}/dashboard-summary`, {
         headers: await this.getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch dashboard summary');
@@ -180,7 +190,7 @@ class ParentApiService {
     }
 
     try {
-      const res = await fetch(
+      const res = await fetchWithServerStatus(
         `${API_BASE_URL}/students/${studentId}/attendance?month=${month}&year=${year}`,
         { headers: await this.getAuthHeaders() }
       );
@@ -210,7 +220,7 @@ class ParentApiService {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/students/${studentId}/homework`, {
+      const res = await fetchWithServerStatus(`${API_BASE_URL}/students/${studentId}/homework`, {
         headers: await this.getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch homework');
@@ -248,18 +258,14 @@ class ParentApiService {
       return newItem;
     }
 
-    try {
-      const res = await fetch(`${API_BASE_URL}/homework`, {
-        method: 'POST',
-        headers: await this.getAuthHeaders(),
-        body: JSON.stringify(data),
-      });
-      const json = await res.json();
-      return json.data || json;
-    } catch (err) {
-      this.inMemoryHomework.unshift(newItem);
-      return newItem;
-    }
+    const res = await fetchWithServerStatus(`${API_BASE_URL}/homework`, {
+      method: 'POST',
+      headers: await this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(`Failed to create homework (${res.status})`);
+    const json = await res.json();
+    return json.data || json;
   }
 
   /**
@@ -277,7 +283,7 @@ class ParentApiService {
 
     try {
       const query = termId ? `?termId=${termId}` : '';
-      const res = await fetch(`${API_BASE_URL}/students/${studentId}/marks${query}`, {
+      const res = await fetchWithServerStatus(`${API_BASE_URL}/students/${studentId}/marks${query}`, {
         headers: await this.getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch marks');
@@ -302,7 +308,7 @@ class ParentApiService {
 
     try {
       const query = category && category !== 'ALL' ? `?category=${category}` : '';
-      const res = await fetch(`${API_BASE_URL}/announcements${query}`, {
+      const res = await fetchWithServerStatus(`${API_BASE_URL}/announcements${query}`, {
         headers: await this.getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch announcements');
@@ -337,20 +343,16 @@ class ParentApiService {
       return newNotice;
     }
 
-    try {
-      const res = await fetch(`${API_BASE_URL}/announcements`, {
-        method: 'POST',
-        headers: await this.getAuthHeaders(),
-        body: JSON.stringify(data),
-      });
-      const json = await res.json();
-      const created = json.data || json;
-      this.inMemoryAnnouncements.unshift(created);
-      return created;
-    } catch (err) {
-      this.inMemoryAnnouncements.unshift(newNotice);
-      return newNotice;
-    }
+    const res = await fetchWithServerStatus(`${API_BASE_URL}/announcements`, {
+      method: 'POST',
+      headers: await this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(`Failed to create announcement (${res.status})`);
+    const json = await res.json();
+    const created = json.data || json;
+    this.inMemoryAnnouncements.unshift(created);
+    return created;
   }
 
   /**
@@ -364,7 +366,7 @@ class ParentApiService {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/communications/teachers`, {
+      const res = await fetchWithServerStatus(`${API_BASE_URL}/communications/teachers`, {
         headers: await this.getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch teachers');
@@ -387,7 +389,7 @@ class ParentApiService {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/communications/messages/${teacherId}`, {
+      const res = await fetchWithServerStatus(`${API_BASE_URL}/communications/messages/${teacherId}`, {
         headers: await this.getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch chat messages');
@@ -425,7 +427,7 @@ class ParentApiService {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/communications/messages`, {
+      const res = await fetchWithServerStatus(`${API_BASE_URL}/communications/messages`, {
         method: 'POST',
         headers: await this.getAuthHeaders(),
         body: JSON.stringify({ recipientId: teacherId, message: messageText }),
@@ -438,9 +440,7 @@ class ParentApiService {
       return saved;
     } catch (err) {
       console.warn('API Error, using fallback:', err);
-      if (!this.inMemoryMessages[teacherId]) this.inMemoryMessages[teacherId] = [];
-      this.inMemoryMessages[teacherId].push(newMessage);
-      return newMessage;
+      throw err;
     }
   }
 
@@ -455,7 +455,7 @@ class ParentApiService {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/notifications`, {
+      const res = await fetchWithServerStatus(`${API_BASE_URL}/notifications`, {
         headers: await this.getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch notifications');
@@ -480,14 +480,14 @@ class ParentApiService {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
+      const res = await fetchWithServerStatus(`${API_BASE_URL}/notifications/${id}/read`, {
         method: 'PATCH',
         headers: await this.getAuthHeaders(),
       });
       return await res.json();
     } catch (err) {
       console.warn('API Error, using fallback:', err);
-      return { success: true };
+      throw err;
     }
   }
 
