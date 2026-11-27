@@ -8,6 +8,8 @@ const supabaseAnonKey =
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNid2hkZnF4dXJzdHZtc2dzbmpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwNDA0OTIsImV4cCI6MjEwNjYxNjQ5Mn0.S1EXE_UNzsJVS6jYAJq-EO_znRVdTl5H4ZZL7xH7dJQ';
 
+export const supabaseHealthUrl = `${supabaseUrl}/auth/v1/health`;
+
 // Cross-platform storage adapter (localStorage on Web, SecureStore on Mobile)
 const ExpoStorageAdapter = {
   getItem: async (key: string): Promise<string | null> => {

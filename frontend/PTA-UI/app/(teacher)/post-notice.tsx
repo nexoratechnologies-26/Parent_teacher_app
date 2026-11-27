@@ -9,6 +9,7 @@ import {
   Modal,
   Platform,
   KeyboardAvoidingView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -85,9 +86,10 @@ export default function PostNoticeScreen() {
       });
       setSubmitting(false);
       setShowSuccess(true);
-    } catch {
+    } catch (error) {
       setSubmitting(false);
-      setShowSuccess(true);
+      console.error('Could not publish notice:', error);
+      Alert.alert('Could not publish notice', 'The notice was not saved. Check the server notice and try again.');
     }
   };
 

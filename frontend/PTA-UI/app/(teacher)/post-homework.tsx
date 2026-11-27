@@ -9,6 +9,7 @@ import {
   Modal,
   Platform,
   KeyboardAvoidingView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -111,9 +112,10 @@ export default function PostHomeworkScreen() {
       });
       setSubmitting(false);
       setShowSuccess(true);
-    } catch {
+    } catch (error) {
       setSubmitting(false);
-      setShowSuccess(true);
+      console.error('Could not post homework:', error);
+      Alert.alert('Could not post homework', 'The assignment was not saved. Check the server notice and try again.');
     }
   };
 
